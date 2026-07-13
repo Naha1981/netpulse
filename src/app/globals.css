@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  /* NetPulse AI token system — a network operations console, not a generic SaaS look. */
+  --bg: #0b0f14;          /* near-black slate, screen-glow feel */
+  --bg-raised: #121821;
+  --bg-card: #161d27;
+  --border: #232c38;
+  --text: #e7edf3;
+  --text-dim: #8b98a8;
+  --signal: #ff8a3d;      /* amber — the "pulse", used sparingly for the one signature moment */
+  --online: #34d399;      /* status green — healthy data */
+  --warn: #f2c94c;
+  --danger: #f2645c;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--signal);
+  color: #0b0f14;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.btn-primary {
+  background: var(--signal);
+  color: #0b0f14;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  transition: filter 0.15s ease;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  transition: border-color 0.15s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--text-dim);
+}
+
+.input-field {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  color: var(--text);
+  width: 100%;
+}
+.input-field:focus {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
