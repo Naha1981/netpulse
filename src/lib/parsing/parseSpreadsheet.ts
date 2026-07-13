@@ -1,6 +1,18 @@
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 
+/**
+ * SECURITY NOTE: the `xlsx` (SheetJS) npm package has two known advisories
+ * (prototype pollution, ReDoS) with no fix published to the npm registry —
+ * SheetJS moved patched releases to their own CDN after npm registry
+ * policy changes. Since this function parses files uploaded by end users,
+ * treat this as a real, tracked risk, not a false positive from `npm
+ * audit`. Before scaling past the design-partner stage, install the
+ * patched build from https://cdn.sheetjs.com/ (see their docs for the
+ * current tarball URL) in place of the npm-registry version, and keep
+ * an eye on https://github.com/SheetJS/sheetjs for a registry fix.
+ */
+
 export interface ParsedSpreadsheet {
   headers: string[];
   rows: Record<string, unknown>[];

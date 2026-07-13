@@ -125,6 +125,14 @@ separate worker process.
   prospect spreadsheets through the wizard — see Phase 0 of the execution
   plan — rather than unit tests for a data model still likely to change
   with real user feedback.
+- **`xlsx` (SheetJS) supply-chain note**: the npm-registry build of `xlsx`
+  has two known advisories (prototype pollution, ReDoS) with no fix
+  published to npm — SheetJS moved patched releases to their own CDN.
+  Since this package parses user-uploaded files, treat this as a real
+  pre-launch action item: swap in the patched build from
+  `https://cdn.sheetjs.com/` before onboarding real design-partner data.
+  `npm audit` will keep flagging this until that swap happens — it's not
+  a false positive.
 
 ## Project structure
 
