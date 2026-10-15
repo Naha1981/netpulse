@@ -1,0 +1,3 @@
+Customer Name,Email,Phone,Plan,Status
+Demo Customer One,demo-one@example.invalid,0000000000,Demo 20Mbps,ACTIVE
+Demo Customer Two,demo-two@example.invalid,0000000000,Demo 50Mbps,Suspended

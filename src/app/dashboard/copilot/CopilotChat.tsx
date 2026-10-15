@@ -8,7 +8,7 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  "Which equipment has no customer assigned?",
+  "How many IP addresses are reserved?",
   "Are there any duplicate IP addresses?",
   "Which warranties are expiring soon?",
   "How many customers are active vs suspended?",
@@ -46,6 +46,7 @@ export default function CopilotChat({ organizationId }: { organizationId: string
 
   return (
     <div className="mt-8">
+      <p className="text-sm" style={{color:"var(--text-dim)"}}>Answers cover imported demo records only. Customer assignment is not linked during import, so unassigned-equipment or assigned-IP results do not prove network problems.</p>
       {messages.length === 0 && (
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (

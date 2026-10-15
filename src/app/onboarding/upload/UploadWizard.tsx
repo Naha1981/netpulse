@@ -117,6 +117,14 @@ export default function UploadWizard({ organizationId }: { organizationId: strin
 
   return (
     <div className="mt-8">
+      <div className="card p-4 mb-6 text-sm">
+        <p>Start with synthetic sample files. Uploaded sample rows are sent to Groq for column mapping. Do not upload personal or customer data in this demo.</p>
+        <div className="flex flex-wrap gap-4 mt-3" style={{color:"var(--signal)"}}>
+          <a href="/samples/customers.csv" download>Customer sample</a>
+          <a href="/samples/ip-addresses.csv" download>IP sample</a>
+          <a href="/samples/equipment.csv" download>Equipment sample</a>
+        </div>
+      </div>
       {step === "select" && (
         <FileDropZone onFile={handleFileSelected} analyzing={analyzing} />
       )}
