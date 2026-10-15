@@ -80,6 +80,13 @@ Return the JSON object described in your instructions.`;
     user: userPrompt,
   });
 
+  if (!result || !["customers","ip_addresses","equipment","unknown"].includes(result.entity_type) || !Array.isArray(result.field_mappings)) {
+    throw new Error("The mapping response was incomplete. Please try again.");
+  }
+  result.confidence = Number.isFinite(result.confidence) ? Math.max(0,Math.min(1,result.confidence)) : 0;
+  result.reasoning = typeof result.reasoning === "string" ? result.reasoning : "Review the proposed columns.";
+  result.field_mappings = result.field_mappings.filter(m => m && typeof m.source_column === "string" && parsed.headers.includes(m.source_column));
+
   // Defensive validation: strip any target_field the model hallucinated
   // outside the allowed schema, rather than trusting it blindly.
   if (result.entity_type !== "unknown") {

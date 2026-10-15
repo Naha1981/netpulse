@@ -14,7 +14,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <aside className="px-6 py-3 text-center text-sm border-b" style={{borderColor:"var(--border)",color:"var(--text-dim)"}}>
+          NetPulse demo - use synthetic data only. First load may take up to a minute on free hosting. No live network monitoring.
+        </aside>
+        {children}
+      </body>
     </html>
   );
 }

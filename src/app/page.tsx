@@ -31,13 +31,13 @@ export default function LandingPage() {
           </h1>
           <p className="mt-6 text-lg" style={{ color: "var(--text-dim)" }}>
             Upload the spreadsheet you already have. NetPulse AI reads it,
-            proposes the field mapping, finds the duplicate IPs and orphaned
-            equipment you didn&apos;t know about, and hands you a health
+            proposes the field mapping, finds the duplicate IPs and expired
+            equipment warranties, and hands you a health
             report — no sales call, no consultant, no migration project.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/signup" className="btn-primary">
-              Upload a spreadsheet, free
+              Try with demo data
             </Link>
             <a href="#how-it-works" className="btn-secondary">
               See how it works
@@ -53,17 +53,17 @@ export default function LandingPage() {
                 className="h-1.5 w-1.5 rounded-full"
                 style={{ background: "var(--online)" }}
               />
-              generated in 42s
+              illustrative example
             </span>
           </div>
           <p className="mt-4 text-sm leading-relaxed">
-            We reviewed 1,204 customer and IP records from your import.
+            Example of the checks available across separate IP and equipment uploads.
           </p>
           <ul className="mt-4 space-y-2.5 text-sm">
             <HealthLine severity="danger" label="6 duplicate IP addresses" />
-            <HealthLine severity="warn" label="18 devices with no assigned customer" />
+            
             <HealthLine severity="warn" label="12 warranties already expired" />
-            <HealthLine severity="online" label="No missing customer records" />
+            
           </ul>
           <div className="mt-5 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
             <p className="text-sm" style={{ color: "var(--text-dim)" }}>
@@ -85,7 +85,7 @@ export default function LandingPage() {
           <Step
             n="2"
             title="AI maps and cleans it"
-            body="No mapping screens. The AI proposes field matches and flags duplicates, invalid IPs, and missing data for your review."
+            body="You review the column mapping. The AI proposes field matches and flags duplicates, invalid IPs, and missing data for your review."
           />
           <Step
             n="3"
