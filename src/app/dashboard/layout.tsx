@@ -16,11 +16,11 @@ export default async function DashboardLayout({
   return (
     <div className="flex-1 flex flex-col">
       <header
-        className="border-b px-6 py-4 flex items-center justify-between"
+        className="border-b px-6 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
         style={{ borderColor: "var(--border)" }}
       >
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+          <Link href="/dashboard" className="flex items-center gap-2 whitespace-nowrap">
             <span
               className="inline-block h-2.5 w-2.5 rounded-full"
               style={{ background: "var(--signal)" }}
@@ -33,7 +33,7 @@ export default async function DashboardLayout({
             <Link href="/onboarding/upload">Import data</Link>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
           <span className="text-sm" style={{ color: "var(--text-dim)" }}>
             {org.name}
           </span>

@@ -45,7 +45,7 @@ export function validateIpAddresses(
     findings.push({
       type: "duplicate_ip",
       count: duplicates.length,
-      description: `${duplicates.length} IP address${duplicates.length === 1 ? "" : "es"} appear more than once in this import — each one is assigned to multiple customers or devices.`,
+      description: `${duplicates.length} IP address${duplicates.length === 1 ? "" : "es"} appear more than once in this import. Check the source records; this alone does not prove a live assignment conflict.`,
       severity: "high",
       sampleValues: duplicates.slice(0, 5).map(([ip]) => ip),
     });
@@ -98,7 +98,7 @@ export function validateDuplicateSerials(
     {
       type: "duplicate_serial",
       count: duplicates.length,
-      description: `${duplicates.length} device serial number${duplicates.length === 1 ? "" : "s"} appear more than once — check for duplicate equipment entries.`,
+      description: `${duplicates.length} device serial number${duplicates.length === 1 ? "" : "s"} ${duplicates.length === 1 ? "appears" : "appear"} more than once — check for duplicate equipment entries.`,
       severity: "medium",
       sampleValues: duplicates.slice(0, 5).map(([s]) => s),
     },
