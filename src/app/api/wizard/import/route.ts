@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { parseSpreadsheet } from "@/lib/parsing/parseSpreadsheet";
-import {
-  validateIpAddresses,
-  validateRequiredField,
-  validateDuplicateSerials,
-  validateExpiredWarranties,
-  type ValidationFinding,
-} from "@/lib/ai/validate";
+import { prepareImport, type ImportEntity } from "@/lib/parsing/normalizeImport";
 import { generateHealthReport } from "@/lib/ai/healthReport";
 import type { EntityType } from "@/lib/ai/mapping";
 
 export const maxDuration = 60;
-
-interface ApprovedMapping {
-  source_column: string;
-  target_field: string | null;
-}
-
-const TABLE_BY_ENTITY: Record<Exclude<EntityType, "unknown">, string> = {
-  customers: "customers",
-  ip_addresses: "ip_addresses",
-  equipment: "equipment",
-};
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -42,13 +25,13 @@ export async function POST(request: NextRequest) {
   }: {
     uploadId: string;
     entityType: Exclude<EntityType, "unknown">;
-    fieldMappings: ApprovedMapping[];
+    fieldMappings: unknown;
   } = body;
 
   if (!uploadId || !entityType || !fieldMappings) {
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
-  if (!TABLE_BY_ENTITY[entityType]) {
+  if (!["customers", "ip_addresses", "equipment"].includes(entityType)) {
     return NextResponse.json({ error: "Unsupported entity type." }, { status: 400 });
   }
 
@@ -62,6 +45,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Upload not found." }, { status: 404 });
   }
 
+  if (uploadRow.status === "imported") {
+    const { data: report, error } = await supabase.from("health_reports").select("*").eq("upload_id", uploadId).single();
+    if (error) return NextResponse.json({ error: "Imported upload is missing its report." }, { status: 409 });
+    return NextResponse.json({ healthReport: report });
+  }
+
   const { data: fileBlob, error: downloadError } = await supabase.storage
     .from("uploads")
     .download(uploadRow.storage_path);
@@ -73,85 +62,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const arrayBuffer = await fileBlob.arrayBuffer();
-  let parsed;
+  let prepared;
   try {
-    parsed = parseSpreadsheet(arrayBuffer, uploadRow.original_filename);
+    const parsed = parseSpreadsheet(await fileBlob.arrayBuffer(), uploadRow.original_filename);
+    prepared = prepareImport(parsed, entityType as ImportEntity, fieldMappings);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not re-parse file." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Invalid import." }, { status: 400 });
   }
-
-  // Build a source_column -> target_field lookup from the approved mapping,
-  // ignoring any column the user left unmapped.
-  const columnMap = new Map<string, string>();
-  for (const m of fieldMappings) {
-    if (m.target_field) columnMap.set(m.source_column, m.target_field);
-  }
-
-  const normalizedRows = parsed.rows.map((row) => {
-    const record: Record<string, unknown> = {
-      organization_id: uploadRow.organization_id,
-      source_upload_id: uploadId,
-    };
-    for (const [sourceCol, targetField] of columnMap.entries()) {
-      const value = row[sourceCol];
-      record[targetField] = value === "" ? null : value;
-    }
-    return record;
-  });
-
-  // Coerce a couple of known boolean/numeric fields so we don't hand the
-  // DB a string where it expects a bool/number.
-  for (const record of normalizedRows) {
-    if ("is_reserved" in record) {
-      record.is_reserved = truthy(record.is_reserved);
-    }
-    if ("is_active" in record) {
-      record.is_active = record.is_active === undefined ? true : truthy(record.is_active);
-    }
-    if ("gps_lat" in record) record.gps_lat = toNumberOrNull(record.gps_lat);
-    if ("gps_lng" in record) record.gps_lng = toNumberOrNull(record.gps_lng);
-  }
-
-  // Run deterministic validation appropriate to the entity type BEFORE
-  // insert, so the health report reflects the data as uploaded.
-  let findings: ValidationFinding[] = [];
-  if (entityType === "ip_addresses") {
-    findings = [
-      ...validateIpAddresses(normalizedRows as { ip_address?: unknown }[]),
-    ];
-  } else if (entityType === "customers") {
-    findings = [
-      ...validateRequiredField(normalizedRows, "full_name", "customer"),
-    ];
-  } else if (entityType === "equipment") {
-    findings = [
-      ...validateDuplicateSerials(normalizedRows as { serial_number?: unknown }[]),
-      ...validateExpiredWarranties(normalizedRows as { warranty_expiry?: unknown }[]),
-    ];
-  }
-
-  const table = TABLE_BY_ENTITY[entityType];
-
-  // Insert in batches to stay well under request/payload limits.
-  const BATCH_SIZE = 500;
-  for (let i = 0; i < normalizedRows.length; i += BATCH_SIZE) {
-    const batch = normalizedRows.slice(i, i + BATCH_SIZE);
-    const { error: insertError } = await supabase.from(table).insert(batch);
-    if (insertError) {
-      await supabase
-        .from("uploads")
-        .update({ status: "failed" })
-        .eq("id", uploadId);
-      return NextResponse.json(
-        { error: `Import failed while writing rows: ${insertError.message}` },
-        { status: 500 }
-      );
-    }
-  }
+  const { rows: normalizedRows, findings } = prepared;
 
   const { data: orgRow } = await supabase
     .from("organizations")
@@ -175,33 +93,13 @@ export async function POST(request: NextRequest) {
     };
   }
 
-  const { data: reportRow, error: reportInsertError } = await supabase
-    .from("health_reports")
-    .insert({
-      organization_id: uploadRow.organization_id,
-      upload_id: uploadId,
-      summary: healthReport.summary,
-      findings: healthReport.findings,
-    })
-    .select()
-    .single();
-
-  if (reportInsertError) {
-    return NextResponse.json({ error: reportInsertError.message }, { status: 500 });
-  }
-
-  await supabase.from("uploads").update({ status: "imported" }).eq("id", uploadId);
-
+  const { data: reportRow, error } = await supabase.rpc("commit_import", {
+    p_upload_id: uploadId,
+    p_entity: entityType,
+    p_rows: normalizedRows,
+    p_summary: healthReport.summary,
+    p_findings: findings,
+  });
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ healthReport: reportRow });
-}
-
-function truthy(value: unknown): boolean {
-  if (typeof value === "boolean") return value;
-  const s = String(value ?? "").trim().toLowerCase();
-  return s === "true" || s === "yes" || s === "1";
-}
-
-function toNumberOrNull(value: unknown): number | null {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
 }

@@ -26,7 +26,7 @@ export async function generateHealthReport(
 ): Promise<HealthReport> {
   if (findings.length === 0) {
     return {
-      summary: `We reviewed ${context.rowCount} ${context.entityType} records from your import and found no data-quality issues — no duplicates, no missing required fields, nothing flagged. This dataset is clean and ready to use.`,
+      summary: `We reviewed ${context.rowCount} ${context.entityType} records from your import and found no issues in the checks supported for this file type. Customer assignments, existing imports and live network health were not checked.`,
       findings: [],
     };
   }

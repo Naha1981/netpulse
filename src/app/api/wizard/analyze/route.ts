@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const digest = await crypto.subtle.digest("SHA-256", arrayBuffer);
+  const fileHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2,"0")).join("");
+  const { data: existing } = await supabase.from("uploads").select("id,status").eq("organization_id",organizationId).eq("file_sha256",fileHash).maybeSingle();
+  if (existing) return NextResponse.json({ error: "This exact file was already uploaded. Use the original import or upload a corrected file." }, { status: 409 });
+
   const storagePath = `${organizationId}/${crypto.randomUUID()}-${file.name}`;
   const { error: uploadError } = await supabase.storage
     .from("uploads")
@@ -88,6 +93,7 @@ export async function POST(request: NextRequest) {
     .from("uploads")
     .insert({
       organization_id: organizationId,
+      file_sha256: fileHash,
       storage_path: storagePath,
       original_filename: file.name,
       detected_entity_type: proposal.entity_type,

@@ -38,7 +38,7 @@ now would be scope creep against the plan.
 
 ## Stack
 
-- Next.js 15 (App Router) + TypeScript + Tailwind CSS
+- Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - Supabase (Postgres, Auth, Storage, Row Level Security)
 - Groq (Llama 3.3 70B) for AI mapping, health report narration, and Copilot
 - SheetJS (`xlsx`) + PapaParse for spreadsheet parsing
@@ -69,7 +69,7 @@ key. Groq's free tier is enough to build and test Phase 1 end-to-end.
 cp .env.example .env.local
 ```
 
-Fill in the four values from steps 1–2.
+Fill in the three values from steps 1–2.
 
 ### 4. Install and run
 
@@ -102,7 +102,7 @@ This is a standard Next.js app — deploys cleanly to Vercel:
 
 1. Push this repo to GitHub (already done if you're reading this there).
 2. Import the repo in Vercel.
-3. Add the same four environment variables from `.env.example` in the
+3. Add the same three environment variables from `.env.example` in the
    Vercel project settings.
 4. Deploy. Update your Supabase Auth redirect URL to match the deployed
    domain's `/auth/callback`.
@@ -120,19 +120,21 @@ separate worker process.
 - The Copilot only answers the 5 intents defined in
   `src/lib/ai/copilot.ts`. This is intentional scope control, not a bug —
   expanding it should track new modules being built, not run ahead of them.
-- No automated test suite yet. Given the solo/bootstrapped context, the
+- Regression tests now cover tenant isolation, atomic onboarding, storage boundaries, import rollback/retry, mapping validation and date/status normalization. Run `npm test`.
+
+- Historical note: no automated test suite existed in the original prototype. Given the solo/bootstrapped context, the
   highest-value next testing investment is running real (anonymized)
   prospect spreadsheets through the wizard — see Phase 0 of the execution
   plan — rather than unit tests for a data model still likely to change
   with real user feedback.
-- **`xlsx` (SheetJS) supply-chain note**: the npm-registry build of `xlsx`
-  has two known advisories (prototype pollution, ReDoS) with no fix
-  published to npm — SheetJS moved patched releases to their own CDN.
-  Since this package parses user-uploaded files, treat this as a real
-  pre-launch action item: swap in the patched build from
-  `https://cdn.sheetjs.com/` before onboarding real design-partner data.
-  `npm audit` will keep flagging this until that swap happens — it's not
-  a false positive.
+- SheetJS now comes from the official patched 0.20.3 tarball rather than the vulnerable npm 0.18.5 build. Run `npm audit` before deployment.
+
+## Safety repairs and existing databases
+
+Fresh projects use `supabase/schema.sql`. Existing Phase 1 projects must apply the two reviewed SQL migrations in `supabase/migrations/` in order before deploying this code. Back up and test against a staging copy first. The first migration fails safely if existing cross-tenant foreign keys violate the new constraints; reconcile those records before retrying. The second adds duplicate-content protection and atomic, locked, retry-safe imports.
+
+`npm test` uses synthetic data in an isolated PostgreSQL-compatible engine. It does not connect to a live Supabase account. Test actual email confirmation, storage upload, three imports and all Copilot intents against a dedicated demo project before admitting customer data. Default demo deployments are for synthetic/anonymized data only.
+
 
 ## Project structure
 
