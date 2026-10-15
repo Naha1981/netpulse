@@ -1,4 +1,4 @@
 Device Type,Serial Number,Brand,Warranty Expiry,Active
-router,DEMO-001,Example,2020-01-01,yes
-radio,DEMO-002,Example,2030-01-01,yes
-router,DEMO-002,Example,2030-01-01,no
+router,NP-RTR-1001,Acme,2020-01-01,yes
+radio,NP-RDO-1002,Acme,2030-01-01,yes
+router,NP-RDO-1002,Acme,2030-01-01,no

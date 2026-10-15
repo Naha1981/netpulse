@@ -37,7 +37,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/signup" className="btn-primary">
-              Try with demo data
+              Get started
             </Link>
             <a href="#how-it-works" className="btn-secondary">
               See how it works

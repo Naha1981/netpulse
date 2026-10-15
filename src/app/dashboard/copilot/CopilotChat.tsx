@@ -46,7 +46,7 @@ export default function CopilotChat({ organizationId }: { organizationId: string
 
   return (
     <div className="mt-8">
-      <p className="text-sm" style={{color:"var(--text-dim)"}}>Answers cover imported demo records only. Customer assignment is not linked during import, so unassigned-equipment or assigned-IP results do not prove network problems.</p>
+      <p className="text-sm" style={{color:"var(--text-dim)"}}>Answers cover imported records only. Customer assignment is not linked during import, so unassigned-equipment or assigned-IP results do not prove network problems.</p>
       {messages.length === 0 && (
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
