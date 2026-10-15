@@ -30,7 +30,7 @@ export function validateIpAddresses(
 
   for (const row of rows) {
     const raw = String(row.ip_address ?? "").trim();
-    if (!raw) continue;
+    if (!raw) { invalid.push("(blank)"); continue; }
 
     if (!IPV4_REGEX.test(raw)) {
       invalid.push(raw);

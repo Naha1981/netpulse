@@ -31,6 +31,7 @@ create or replace function is_org_member(org_id uuid)
 returns boolean
 language sql
 security definer
+set search_path = public, pg_temp
 stable
 as $$
   select exists (
@@ -142,14 +143,13 @@ alter table copilot_queries enable row level security;
 create policy "members can read their org" on organizations
   for select using (is_org_member(id));
 
-create policy "any authenticated user can create an org" on organizations
-  for insert with check (auth.uid() is not null);
+-- Organizations are created through create_organization, not direct client inserts.
 
 create policy "members can read their membership rows" on organization_members
   for select using (user_id = auth.uid());
 
-create policy "members can insert their own membership on signup" on organization_members
-  for insert with check (user_id = auth.uid());
+-- Memberships are created only by the narrow atomic onboarding function below.
+-- A logged-in user must never be allowed to self-enrol in an arbitrary ISP.
 
 -- Generic per-table policy pattern: members can select/insert/update/delete
 -- rows in their own organization only.
@@ -211,3 +211,82 @@ create policy "org members can write their upload files"
     bucket_id = 'uploads'
     and is_org_member(((storage.foldername(name))[1])::uuid)
   );
+
+-- Atomic onboarding: no INSERT RETURNING before the owner membership exists.
+create or replace function public.create_organization(p_name text, p_isp_type text)
+returns public.organizations
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+declare result public.organizations; caller uuid := auth.uid();
+begin
+  if caller is null then raise exception 'Not signed in'; end if;
+  if p_name is null or length(trim(p_name)) = 0 or length(p_name) > 200 then
+    raise exception 'Organization name must contain 1-200 characters';
+  end if;
+  if p_isp_type is null or p_isp_type not in ('fibre','wireless','mixed','enterprise') then
+    raise exception 'Invalid ISP type';
+  end if;
+  insert into public.organizations(name,isp_type) values(trim(p_name),p_isp_type) returning * into result;
+  insert into public.organization_members(organization_id,user_id,role) values(result.id,caller,'owner');
+  return result;
+end;
+$$;
+revoke all on function public.create_organization(text,text) from public;
+grant execute on function public.create_organization(text,text) to authenticated;
+
+-- Foreign keys must preserve the tenant boundary, not merely reference any ID.
+alter table customers add constraint customers_org_id_unique unique (organization_id,id);
+alter table uploads add constraint uploads_org_id_unique unique (organization_id,id);
+alter table ip_addresses add constraint ip_customer_same_org foreign key (organization_id,customer_id) references customers(organization_id,id);
+alter table equipment add constraint equipment_customer_same_org foreign key (organization_id,customer_id) references customers(organization_id,id);
+alter table customers add constraint customers_upload_same_org foreign key (organization_id,source_upload_id) references uploads(organization_id,id);
+alter table ip_addresses add constraint ip_upload_same_org foreign key (organization_id,source_upload_id) references uploads(organization_id,id);
+alter table equipment add constraint equipment_upload_same_org foreign key (organization_id,source_upload_id) references uploads(organization_id,id);
+alter table health_reports add constraint report_upload_same_org foreign key (organization_id,upload_id) references uploads(organization_id,id);
+-- Retry-safe, transactional import. Locking serializes concurrent retries.
+alter table public.uploads add column if not exists file_sha256 text;
+create unique index if not exists uploads_org_file_hash on public.uploads(organization_id,file_sha256) where file_sha256 is not null;
+create unique index if not exists health_reports_one_per_upload on public.health_reports(upload_id) where upload_id is not null;
+
+create or replace function public.commit_import(p_upload_id uuid,p_entity text,p_rows jsonb,p_summary text,p_findings jsonb)
+returns public.health_reports
+language plpgsql security invoker set search_path = public, pg_temp
+as $$
+declare u public.uploads; result public.health_reports; allowed text[]; required text;
+begin
+ select * into u from public.uploads where id=p_upload_id for update;
+ if not found then raise exception 'Upload not found'; end if;
+ if u.status='imported' then
+  select * into result from public.health_reports where upload_id=u.id;
+  if not found then raise exception 'Imported upload is missing its report'; end if;
+  return result;
+ end if;
+ if u.status <> 'analyzed' then raise exception 'Upload is not ready for import'; end if;
+ if p_entity is null or p_entity not in ('customers','ip_addresses','equipment') then raise exception 'Unsupported entity'; end if;
+ if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) not between 1 and 20000 then raise exception 'Invalid import rows'; end if;
+ if p_entity='customers' then allowed:=array['full_name','email','phone','physical_address','gps_lat','gps_lng','service_plan','status']; required:='full_name';
+ elsif p_entity='ip_addresses' then allowed:=array['ip_address','subnet','device_serial','is_reserved']; required:='ip_address';
+ else allowed:=array['device_type','serial_number','brand','warranty_expiry','is_active']; required:='serial_number'; end if;
+ if exists(select 1 from jsonb_array_elements(p_rows) r where jsonb_typeof(r)<>'object' or coalesce(trim(r->>required),'')='') then raise exception 'Missing required row value'; end if;
+ if exists(select 1 from jsonb_array_elements(p_rows) r, jsonb_object_keys(r) k where not k=any(allowed)) then raise exception 'Unsupported destination field'; end if;
+ if p_entity='customers' then
+  insert into public.customers(organization_id,source_upload_id,full_name,email,phone,physical_address,gps_lat,gps_lng,service_plan,status)
+  select u.organization_id,u.id,r.full_name,r.email,r.phone,r.physical_address,r.gps_lat,r.gps_lng,r.service_plan,coalesce(r.status,'active')
+  from jsonb_to_recordset(p_rows) as r(full_name text,email text,phone text,physical_address text,gps_lat numeric,gps_lng numeric,service_plan text,status text);
+ elsif p_entity='ip_addresses' then
+  if exists(select 1 from jsonb_array_elements(p_rows) r where not (r->>'ip_address') ~ '^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$') then raise exception 'Invalid IPv4 address'; end if;
+  insert into public.ip_addresses(organization_id,source_upload_id,ip_address,subnet,device_serial,is_reserved)
+  select u.organization_id,u.id,r.ip_address,r.subnet,r.device_serial,coalesce(r.is_reserved,false)
+  from jsonb_to_recordset(p_rows) as r(ip_address text,subnet text,device_serial text,is_reserved boolean);
+ else
+  insert into public.equipment(organization_id,source_upload_id,device_type,serial_number,brand,warranty_expiry,is_active)
+  select u.organization_id,u.id,r.device_type,r.serial_number,r.brand,r.warranty_expiry,coalesce(r.is_active,true)
+  from jsonb_to_recordset(p_rows) as r(device_type text,serial_number text,brand text,warranty_expiry date,is_active boolean);
+ end if;
+ insert into public.health_reports(organization_id,upload_id,summary,findings) values(u.organization_id,u.id,p_summary,p_findings) returning * into result;
+ update public.uploads set status='imported',detected_entity_type=p_entity where id=u.id;
+ return result;
+end;
+$$;
+revoke all on function public.commit_import(uuid,text,jsonb,text,jsonb) from public;
+grant execute on function public.commit_import(uuid,text,jsonb,text,jsonb) to authenticated;

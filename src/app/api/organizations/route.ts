@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { name, ispType } = body as { name?: string; ispType?: string };
 
-  if (!name || !name.trim()) {
+  if (typeof name !== "string" || !name.trim() || name.length > 200) {
     return NextResponse.json({ error: "Organization name is required." }, { status: 400 });
   }
 
@@ -24,24 +24,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid ISP type." }, { status: 400 });
   }
 
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert({ name: name.trim(), isp_type: ispType })
-    .select()
-    .single();
-
-  if (orgError) {
-    return NextResponse.json({ error: orgError.message }, { status: 500 });
-  }
-
-  const { error: memberError } = await supabase.from("organization_members").insert({
-    organization_id: org.id,
-    user_id: user.id,
-    role: "owner",
+  const { data: org, error } = await supabase.rpc("create_organization", {
+    p_name: name.trim(),
+    p_isp_type: ispType,
   });
-
-  if (memberError) {
-    return NextResponse.json({ error: memberError.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
   return NextResponse.json({ organization: org });

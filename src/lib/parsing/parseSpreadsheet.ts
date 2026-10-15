@@ -45,6 +45,7 @@ export function parseSpreadsheet(
       skipEmptyLines: true,
       dynamicTyping: false,
     });
+    if (result.errors.length > 0) throw new Error(`Invalid CSV: ${result.errors[0].message}`);
     headers = result.meta.fields ?? [];
     rows = result.data;
   } else {
