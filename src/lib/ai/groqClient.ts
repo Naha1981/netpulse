@@ -9,7 +9,7 @@ export function getGroqClient() {
         "GROQ_API_KEY is not set. Add it to your environment (see .env.example)."
       );
     }
-    client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    client = new Groq({ apiKey: process.env.GROQ_API_KEY, timeout: 25000, maxRetries: 1 });
   }
   return client;
 }
@@ -27,8 +27,9 @@ export async function groqJson<T>(params: {
 }): Promise<T> {
   const groq = getGroqClient();
   const completion = await groq.chat.completions.create({
-    model: params.model ?? "llama-3.3-70b-versatile",
+    model: params.model ?? process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
     temperature: params.temperature ?? 0.1,
+    max_completion_tokens: 4096,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: params.system },

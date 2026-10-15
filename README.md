@@ -40,7 +40,7 @@ now would be scope creep against the plan.
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - Supabase (Postgres, Auth, Storage, Row Level Security)
-- Groq (Llama 3.3 70B) for AI mapping, health report narration, and Copilot
+- Groq (configurable JSON model; default GPT OSS 20B) for AI mapping, health report narration, and Copilot
 - SheetJS (`xlsx`) + PapaParse for spreadsheet parsing
 
 ## Setup
