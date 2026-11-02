@@ -15,17 +15,25 @@ export default function SignupPage() {
     setStatus("loading");
     setError(null);
 
-    const supabase = createClient();
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (signUpError) {
-      setError(signUpError.message);
+    try {
+      const supabase = createClient();
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+  
+      if (signUpError) {
+        setError(/fetch|network|load failed/i.test(signUpError.message)
+          ? "Account creation is temporarily unavailable. Your account has not been confirmed. Please try again later."
+          : signUpError.message);
+        setStatus("error");
+        return;
+      }
+    } catch {
+      setError("Account creation is temporarily unavailable. Your account has not been confirmed. Please try again later.");
       setStatus("error");
       return;
     }
