@@ -118,7 +118,7 @@ export default function UploadWizard({ organizationId }: { organizationId: strin
   return (
     <div className="mt-8">
       <div className="card p-4 mb-6 text-sm">
-        <p>Start with synthetic sample files. Uploaded sample rows are sent to Groq for column mapping. Do not upload personal or customer data yet.</p>
+        <p>Start with synthetic sample files. AI-assisted mapping sends sample rows to Groq when available. Rules-based matching stays on this service. Do not upload personal or customer data yet.</p>
         <div className="flex flex-wrap gap-4 mt-3" style={{color:"var(--signal)"}}>
           <a href="/samples/customers.csv" download>Customer sample</a>
           <a href="/samples/ip-addresses.csv" download>IP sample</a>
@@ -308,7 +308,7 @@ function HealthReportView({
   return (
     <div className="card p-6">
       <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--signal)" }}>
-        AI Health Report
+        Health Report
       </p>
       <p className="mt-3 leading-relaxed">{report.summary}</p>
 

@@ -1,3 +1,4 @@
+import {rulesMapping} from "./rulesMapping";
 import { groqJson } from "./groqClient";
 import type { ParsedSpreadsheet } from "@/lib/parsing/parseSpreadsheet";
 
@@ -65,6 +66,7 @@ You must only use target_field values from the allowed list you're given for the
 export async function proposeMapping(
   parsed: ParsedSpreadsheet
 ): Promise<FieldMappingProposal> {
+  if(process.env.AI_MODE==="rules") return rulesMapping(parsed);
   const userPrompt = `Column headers: ${JSON.stringify(parsed.headers)}
 
 Sample rows (up to 15):

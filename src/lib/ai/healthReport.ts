@@ -27,6 +27,7 @@ export async function generateHealthReport(
   findings: ValidationFinding[],
   context: { organizationName: string; entityType: string; rowCount: number }
 ): Promise<HealthReport> {
+  if(process.env.AI_MODE==='rules' && findings.length>0)return {summary:`Rules-based health report: imported ${context.rowCount} ${context.entityType} records. `+findings.map(f=>f.description).join(' ')+' Verify flagged rows against your source. These checks do not establish live network faults.',findings};
   if (findings.length === 0) {
     return {
       summary: `We reviewed ${context.rowCount} ${context.entityType} records from your import and found no issues in the checks supported for this file type. Customer assignments, existing imports and live network health were not checked.`,

@@ -1,3 +1,4 @@
+import { sameOrigin } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { parseSpreadsheet } from "@/lib/parsing/parseSpreadsheet";
@@ -6,6 +7,7 @@ import { proposeMapping } from "@/lib/ai/mapping";
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  if(!sameOrigin(request)) return NextResponse.json({error:"Invalid request origin"},{status:403});
   const supabase = await createClient();
 
   const {
@@ -26,6 +28,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing organizationId." }, { status: 400 });
   }
 
+  const {data:membership}=await supabase.from("organization_members").select("id").eq("user_id",user.id).eq("organization_id",organizationId).maybeSingle();
+  if(!membership)return NextResponse.json({error:"Organization not found."},{status:404});
   const allowedExtensions = [".xlsx", ".xls", ".csv"];
   const hasAllowedExtension = allowedExtensions.some((ext) =>
     file.name.toLowerCase().endsWith(ext)
@@ -78,15 +82,7 @@ export async function POST(request: NextRequest) {
   try {
     proposal = await proposeMapping(parsed);
   } catch (err) {
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? `AI mapping failed: ${err.message}`
-            : "AI mapping failed.",
-      },
-      { status: 502 }
-    );
+    return NextResponse.json({error:"AI mapping is unavailable. Please try again later; your records were not imported."},{status:503});
   }
 
   const { data: uploadRow, error: insertError } = await supabase

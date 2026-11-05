@@ -1,5 +1,5 @@
 import { groqJson } from "./groqClient";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DataClient } from "@/lib/supabase/server";
 
 /**
  * Design decision: the LLM never writes or executes SQL directly against
@@ -49,6 +49,15 @@ If the question doesn't clearly match one of these (e.g. it asks about network m
 Respond ONLY with strict JSON: { "intent": "one of the intents above" }`;
 
 export async function classifyIntent(question: string): Promise<CopilotIntent> {
+  if(process.env.AI_MODE==='rules'){
+    const q=question.toLowerCase();
+    if(/equipment|devices?|routers?/.test(q)&&/no customer|without.*customer|unassigned/.test(q))return 'equipment_without_customer';
+    if(/duplicat/.test(q)&&/ip/.test(q))return 'duplicate_ip_addresses';
+    if(/warrant/.test(q))return 'expiring_warranties';
+    if(/ip/.test(q)&&/usage|summary|allocated|reserved|tracked|how many/.test(q))return 'ip_usage_summary';
+    if(/customer/.test(q)&&/how many|count|status|active|suspended|cancelled/.test(q))return 'customer_count_by_status';
+    return 'unsupported';
+  }
   const { intent } = await groqJson<{ intent: CopilotIntent }>({
     system: CLASSIFY_SYSTEM_PROMPT,
     user: question,
@@ -63,7 +72,7 @@ interface IntentResult {
 }
 
 async function runIntent(
-  supabase: SupabaseClient,
+  supabase: DataClient,
   organizationId: string,
   intent: CopilotIntent
 ): Promise<IntentResult> {
@@ -95,7 +104,7 @@ async function runIntent(
       const dupes = [...counts.entries()].filter(([, c]) => c > 1);
       return {
         data: dupes.map(([ip, count]) => ({ ip_address: ip, count })),
-        narrationContext: `${dupes.length} IP addresses assigned more than once.`,
+        narrationContext: `${dupes.length} IP address value(s) appear in multiple imported rows. This does not prove a live assignment conflict.`,
       };
     }
 
@@ -160,7 +169,7 @@ async function runIntent(
 const ANSWER_SYSTEM_PROMPT = `You are NetPulse AI's Copilot. You've been given the exact result of a database query already run for the ISP owner's question. Write a short, direct answer (1-3 sentences) using only the numbers/data given — never invent or round in a way that changes the meaning. If the data list is empty, say so plainly and note that's good news where relevant (e.g. no duplicates found). Respond ONLY with strict JSON: { "answer": "string" }`;
 
 export async function answerCopilotQuestion(
-  supabase: SupabaseClient,
+  supabase: DataClient,
   organizationId: string,
   question: string
 ): Promise<{ intent: CopilotIntent; answer: string; data: unknown }> {
@@ -177,6 +186,7 @@ export async function answerCopilotQuestion(
 
   const result = await runIntent(supabase, organizationId, intent);
 
+  if(process.env.AI_MODE==='rules')return {intent,answer:'Rules-based database answer (AI daily limit reached): '+result.narrationContext,data:result.data};
   const { answer } = await groqJson<{ answer: string }>({
     system: ANSWER_SYSTEM_PROMPT,
     user: JSON.stringify({

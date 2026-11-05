@@ -1,0 +1,12 @@
+import type {ParsedSpreadsheet} from '@/lib/parsing/parseSpreadsheet';
+import type {FieldMappingProposal,EntityType} from './mapping';
+const aliases:Record<string,string[]>={full_name:['full name','customer name','name','customer'],email:['email','email address'],phone:['phone','telephone','mobile','phone number'],physical_address:['physical address','address'],gps_lat:['gps lat','latitude'],gps_lng:['gps lng','longitude'],service_plan:['service plan','plan','package'],status:['status','customer status'],ip_address:['ip address','ip','ipv4'],subnet:['subnet','network'],device_serial:['device serial','device serial number'],is_reserved:['is reserved','reserved'],device_type:['device type','type'],serial_number:['serial number','serial','serial no'],brand:['brand','manufacturer'],warranty_expiry:['warranty expiry','warranty expiry date','warranty expiration','warranty expires'],is_active:['is active','active']};
+const normalize=(s:string)=>s.toLowerCase().trim().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
+export function rulesMapping(parsed:ParsedSpreadsheet):FieldMappingProposal{
+ const mappings=parsed.headers.map(source_column=>({source_column,target_field:Object.entries(aliases).find(([,words])=>words.includes(normalize(source_column)))?.[0]||null}));
+ const targets=new Set(mappings.map(x=>x.target_field));let entity_type:EntityType='unknown';
+ if(targets.has('ip_address'))entity_type='ip_addresses';else if(targets.has('serial_number')&&(targets.has('device_type')||targets.has('brand')||targets.has('warranty_expiry')))entity_type='equipment';else if(targets.has('full_name'))entity_type='customers';
+ const allowed:Record<EntityType,string[]>={customers:['full_name','email','phone','physical_address','gps_lat','gps_lng','service_plan','status'],ip_addresses:['ip_address','subnet','device_serial','is_reserved'],equipment:['serial_number','device_type','brand','warranty_expiry','is_active'],unknown:[]};
+ const seen=new Set<string>();const field_mappings=mappings.map(m=>{if(!m.target_field||!allowed[entity_type].includes(m.target_field)||seen.has(m.target_field))return {...m,target_field:null};seen.add(m.target_field);return m;});
+ return {entity_type,confidence:entity_type==='unknown'?0:0.9,reasoning:'Rules-based header matching. AI is unavailable under the free daily limit. Review every mapping before importing; unmatched columns are left blank.',field_mappings};
+}

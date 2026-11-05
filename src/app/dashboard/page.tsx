@@ -58,7 +58,7 @@ export default async function DashboardPage() {
           {latestReport && (
             <div className="card p-6 mt-6">
               <p className="mono text-xs uppercase tracking-widest" style={{ color: "var(--signal)" }}>
-                Latest AI Health Report
+                Latest Health Report
               </p>
               <p className="mt-3 text-sm leading-relaxed">{latestReport.summary}</p>
             </div>

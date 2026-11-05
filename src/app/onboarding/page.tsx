@@ -3,6 +3,8 @@ import { getCurrentOrganization } from "@/lib/org";
 import OnboardingForm from "./OnboardingForm";
 
 export default async function OnboardingPage() {
+  const {currentUser}=await import("@/lib/session");
+  if(!await currentUser())redirect("/login");
   const org = await getCurrentOrganization();
 
   // Already onboarded — send straight to the upload wizard.

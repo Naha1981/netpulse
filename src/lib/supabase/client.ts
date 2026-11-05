@@ -1,8 +1,2 @@
-import { createBrowserClient } from "@supabase/ssr";
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+async function auth(action:string,body:unknown={}){try{const r=await fetch('/api/auth/'+action,{signal:AbortSignal.timeout(25000),method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();return {error:r.ok?null:{message:d.error||'Request failed'}};}catch{return {error:{message:'Connection failed. Please try again.'}};}}
+export function createClient(){return {auth:{signUp:(body:unknown)=>auth('signup',body),signInWithPassword:(body:unknown)=>auth('login',body),signOut:()=>auth('logout')}};}

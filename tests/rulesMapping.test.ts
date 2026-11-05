@@ -1,0 +1,4 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {rulesMapping} from '../src/lib/ai/rulesMapping';
+function parsed(headers:string[]){return {headers,sampleRows:[],totalRowCount:1,rows:[]} as unknown as import('../src/lib/parsing/parseSpreadsheet').ParsedSpreadsheet;}
+test('rules map only recognised headers and leave unknown blank',()=>{const r=rulesMapping(parsed(['Customer Name','Email','secret']));assert.equal(r.entity_type,'customers');assert.equal(r.field_mappings[2].target_field,null);assert.match(r.reasoning,/Rules-based/);});
+test('IP and equipment detection',()=>{assert.equal(rulesMapping(parsed(['IP Address','Reserved'])).entity_type,'ip_addresses');assert.equal(rulesMapping(parsed(['Serial Number','Brand'])).entity_type,'equipment');assert.equal(rulesMapping(parsed(['mystery','foo'])).entity_type,'unknown');});

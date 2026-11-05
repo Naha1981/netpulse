@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentOrganization } from "@/lib/org";
+import DeleteAccountButton from "./DeleteAccountButton";
 import LogoutButton from "./LogoutButton";
 
 export default async function DashboardLayout({
@@ -8,6 +9,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { currentUser } = await import("@/lib/session");
+  if(!await currentUser()) redirect("/login");
   const org = await getCurrentOrganization();
   if (!org) {
     redirect("/onboarding");
@@ -41,6 +44,7 @@ export default async function DashboardLayout({
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      <footer className="px-6 py-5 border-t"><DeleteAccountButton /></footer>
     </div>
   );
 }

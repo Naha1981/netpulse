@@ -38,7 +38,7 @@ export default function SignupPage() {
       return;
     }
 
-    setStatus("sent");
+    window.location.assign("/onboarding");
   }
 
   return (
@@ -55,8 +55,7 @@ export default function SignupPage() {
         {status === "sent" ? (
           <div className="card p-5 mt-8">
             <p className="text-sm">
-              Check <span className="font-medium">{email}</span> for a confirmation
-              link to finish signing up.
+              Your account is ready. Opening your workspace.
             </p>
           </div>
         ) : (
@@ -84,6 +83,7 @@ export default function SignupPage() {
                 type="password"
                 required
                 minLength={8}
+                maxLength={128}
                 className="input-field"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

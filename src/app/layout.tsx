@@ -15,9 +15,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <aside className="px-6 py-3 text-center text-sm border-b" style={{borderColor:"var(--border)",color:"var(--text-dim)"}}>
-          Sample data. Fictional records.
-        </aside>
         {children}
       </body>
     </html>
