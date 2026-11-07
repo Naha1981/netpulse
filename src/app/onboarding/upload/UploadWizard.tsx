@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { readApiResponse } from "@/lib/apiResponse";
 
 type EntityType = "customers" | "ip_addresses" | "equipment" | "unknown";
 
@@ -68,12 +69,12 @@ export default function UploadWizard({ organizationId }: { organizationId: strin
 
     try {
       const res = await fetch("/api/wizard/analyze", { method: "POST", body: formData });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Analysis failed.");
+      const json = await readApiResponse(res);
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Analysis failed.");
 
-      setUploadId(json.uploadId);
-      setProposal(json.proposal);
-      setTotalRowCount(json.totalRowCount);
+      setUploadId(json.uploadId as string);
+      setProposal(json.proposal as Proposal);
+      setTotalRowCount(json.totalRowCount as number);
       setStep("review");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -104,10 +105,10 @@ export default function UploadWizard({ organizationId }: { organizationId: strin
           fieldMappings: proposal.field_mappings,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Import failed.");
+      const json = await readApiResponse(res);
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Import failed.");
 
-      setHealthReport(json.healthReport);
+      setHealthReport(json.healthReport as HealthReport);
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
