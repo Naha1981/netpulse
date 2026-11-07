@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {readApiResponse} from '../src/lib/apiResponse';
 test('proxy HTML and rate limits produce safe user text instead of JSON parser noise',async()=>{
  await assert.rejects(readApiResponse(new Response('<!doctype html>upstream error',{status:502})),/service could not complete/);
- await assert.rejects(readApiResponse(new Response('<html>Rate limit</html>',{status:429})),/Wait a few minutes/);
+ await assert.rejects(readApiResponse(new Response('<html>Rate limit</html>',{status:429})),/wait a few minutes/);
  await assert.rejects(readApiResponse(new Response('null')),/invalid response/);
  assert.deepEqual(await readApiResponse(Response.json({error:'Invalid IPv4'})),{error:'Invalid IPv4'});
  assert.deepEqual(await readApiResponse(Response.json({uploadId:'synthetic'})),{uploadId:'synthetic'});
 });
+
+test('ambiguous failures never claim records were not imported or invite blind retry',async()=>{for(const status of [429,502]){await assert.rejects(readApiResponse(new Response('<html>error</html>',{status})),(e:Error)=>{assert.match(e.message,/could not be confirmed/);assert.match(e.message,/Check your dashboard/);assert.doesNotMatch(e.message,/were not imported/);return true;});}});
