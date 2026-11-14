@@ -27,13 +27,13 @@ export default function LandingPage() {
             For South African WISPs &amp; small ISPs
           </p>
           <h1 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1]">
-            From Excel to an AI-powered ISP operations view — in under 15 minutes.
+            Your ISP runs on a spreadsheet. That spreadsheet knows what is breaking.
           </h1>
           <p className="mt-6 text-lg" style={{ color: "var(--text-dim)" }}>
-            Upload the spreadsheet you already have. NetPulse AI reads it,
+            Upload the Excel or CSV you already have. NetPulse reads it,
             proposes the field mapping, finds the duplicate IPs and expired
             equipment warranties, and hands you a health
-            report — no sales call, no consultant, no migration project.
+            report - no sales call, no consultant, no migration project.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/signup" className="btn-primary">
